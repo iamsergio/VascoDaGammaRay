@@ -10,6 +10,7 @@
 #include <QGuiApplication>
 #include <QWindow>
 #include <QQuickWindow>
+#include <QTextStream>
 #include <QProcessEnvironment>
 
 #include <thread>
@@ -23,11 +24,41 @@ QStringList availableCommands()
     return QStringList() << "quit" << "print_windows" << "hide_windows" << "set_persistent_windows_false" << "print_info";
 }
 
+QtMessageHandler s_originalHandler;
+QFile *s_logFile = nullptr;
+
+void install_qt_message_handler()
+{
+    if (qEnvironmentVariableIsSet("VASCO_OUTPUT_FILE")) {
+        const QString outputFilePath = qEnvironmentVariable("VASCO_OUTPUT_FILE");
+        s_logFile = new QFile(outputFilePath);
+
+        if (!s_logFile->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
+            delete s_logFile;
+            s_logFile = nullptr;
+            qWarning() << "Failed to open output file for logging:" << outputFilePath;
+        }
+
+        s_originalHandler = qInstallMessageHandler([](QtMsgType type, const QMessageLogContext &context, const QString &msg) {
+            if (s_logFile) {
+                static QTextStream out(s_logFile);
+                out << msg << Qt::endl;
+            }
+
+            s_originalHandler(type, context, msg);
+        });
+    }
+}
+
 void wait_for_qt()
 {
     while (!QCoreApplication::instance()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+
+    QMetaObject::invokeMethod(QCoreApplication::instance(), [] {
+        install_qt_message_handler();
+    });
 
     qDebug() << "Qt started";
 }
@@ -121,11 +152,11 @@ void handleCommand(const QByteArray &command)
         s_shouldQuit = true;
         QCoreApplication::quit();
     } else if (command == "print_windows") {
-        command_printWindows();
+        QMetaObject::invokeMethod(QCoreApplication::instance(), command_printWindows);
     } else if (command == "hide_windows") {
-        command_hideWindows();
+        QMetaObject::invokeMethod(QCoreApplication::instance(), command_hideWindows);
     } else if (command == "print_info") {
-        command_printInfo();
+        QMetaObject::invokeMethod(QCoreApplication::instance(), command_printInfo);
     } else {
         qWarning() << Q_FUNC_INFO << "Unknown command received. Available commands: " << availableCommands().join(",");
     }
