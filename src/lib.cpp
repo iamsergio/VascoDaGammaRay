@@ -19,6 +19,13 @@ static bool s_shouldQuit = false;
 
 namespace Vasco {
 
+QString appName()
+{
+    QFileInfo info(QCoreApplication::applicationFilePath());
+    return info.fileName();
+}
+
+
 QStringList availableCommands()
 {
     return QStringList() << "quit" << "print_windows" << "hide_windows" << "set_persistent_windows_false" << "print_info";
@@ -29,8 +36,12 @@ QFile *s_logFile = nullptr;
 
 void install_qt_message_handler()
 {
-    if (qEnvironmentVariableIsSet("VASCO_OUTPUT_FILE")) {
-        const QString outputFilePath = qEnvironmentVariable("VASCO_OUTPUT_FILE");
+    const QString outputFilePath = [] {
+        // TODO: Add some env var
+        return QStringLiteral("/tmp/vasco-%1.out").arg(appName());
+    }();
+
+    if (!outputFilePath.isEmpty()) {
         s_logFile = new QFile(outputFilePath);
 
         if (!s_logFile->open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) {
@@ -146,7 +157,6 @@ void command_printInfo()
     }
 }
 
-
 void handleCommand(const QByteArray &command)
 {
     if (command.size() > 100) {
@@ -168,12 +178,6 @@ void handleCommand(const QByteArray &command)
     } else {
         qWarning() << Q_FUNC_INFO << "Unknown command received. Available commands: " << availableCommands().join(",");
     }
-}
-
-QString appName()
-{
-    QFileInfo info(QCoreApplication::applicationFilePath());
-    return info.fileName();
 }
 
 bool listen()
