@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIRS ON)
 
-find_package(Qt6 6.6 NO_MODULE REQUIRED COMPONENTS Gui Network Quick)
+find_package(Qt6 6.5 NO_MODULE REQUIRED COMPONENTS Gui Network Quick)
 
 if (ENABLE_ASAN)
     add_compile_options(-fsanitize=address -fsanitize=undefined)
