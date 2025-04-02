@@ -50,6 +50,12 @@ void install_qt_message_handler()
     }
 }
 
+void clean_message_handler()
+{
+    delete s_logFile;
+    s_logFile = nullptr;
+}
+
 void wait_for_qt()
 {
     while (!QCoreApplication::instance()) {
@@ -58,6 +64,7 @@ void wait_for_qt()
 
     QMetaObject::invokeMethod(QCoreApplication::instance(), [] {
         install_qt_message_handler();
+        qDebug() << "Message handler installed for" << qEnvironmentVariable("VASCO_OUTPUT_FILE");
     });
 
     qDebug() << "Qt started";
@@ -150,6 +157,7 @@ void handleCommand(const QByteArray &command)
     qDebug() << Q_FUNC_INFO << "received" << command;
     if (command == "quit") {
         s_shouldQuit = true;
+        clean_message_handler();
         QCoreApplication::quit();
     } else if (command == "print_windows") {
         QMetaObject::invokeMethod(QCoreApplication::instance(), command_printWindows);
