@@ -90,8 +90,10 @@ void command_printInfo()
         QStandardPaths::AppConfigLocation,
         QStandardPaths::PublicShareLocation,
         QStandardPaths::TemplatesLocation,
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
         QStandardPaths::StateLocation,
         QStandardPaths::GenericStateLocation
+#endif
     };
 
     for (auto location : locationsList) {
