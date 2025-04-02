@@ -22,6 +22,7 @@ LD_PRELOAD=$BUILD_DIR/lib/libvascodagammaray.so $BUILD_DIR/bin/testvasco &
 
 sleep 2
 
+echo -n "print_info" | socat - UNIX-CONNECT:/tmp/testvasco-IpcPipe
 echo -n "quit" | socat - UNIX-CONNECT:/tmp/testvasco-IpcPipe
 
 sleep 5

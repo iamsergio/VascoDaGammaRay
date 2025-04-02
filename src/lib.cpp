@@ -6,11 +6,12 @@
 #include <QFileInfo>
 #include <QLocalServer>
 #include <QLocalSocket>
+#include <QStandardPaths>
 #include <QGuiApplication>
 #include <QWindow>
 #include <QQuickWindow>
+#include <QProcessEnvironment>
 
-#include <qcoreapplication.h>
 #include <thread>
 
 static bool s_shouldQuit = false;
@@ -19,7 +20,7 @@ namespace Vasco {
 
 QStringList availableCommands()
 {
-    return QStringList() << "quit" << "print_windows" << "hide_windows" << "set_persistent_windows_false";
+    return QStringList() << "quit" << "print_windows" << "hide_windows" << "set_persistent_windows_false" << "print_info";
 }
 
 void wait_for_qt()
@@ -63,6 +64,49 @@ void command_setPersistentWindowsFalse()
     }
 }
 
+void command_printInfo()
+{
+    qDebug() << Q_FUNC_INFO << "Printing QStandardPaths locations";
+
+    const QList<QStandardPaths::StandardLocation> locationsList = {
+        QStandardPaths::DesktopLocation,
+        QStandardPaths::DocumentsLocation,
+        QStandardPaths::FontsLocation,
+        QStandardPaths::ApplicationsLocation,
+        QStandardPaths::MusicLocation,
+        QStandardPaths::MoviesLocation,
+        QStandardPaths::PicturesLocation,
+        QStandardPaths::TempLocation,
+        QStandardPaths::HomeLocation,
+        QStandardPaths::AppLocalDataLocation,
+        QStandardPaths::CacheLocation,
+        QStandardPaths::GenericDataLocation,
+        QStandardPaths::RuntimeLocation,
+        QStandardPaths::ConfigLocation,
+        QStandardPaths::DownloadLocation,
+        QStandardPaths::GenericCacheLocation,
+        QStandardPaths::GenericConfigLocation,
+        QStandardPaths::AppDataLocation,
+        QStandardPaths::AppConfigLocation,
+        QStandardPaths::PublicShareLocation,
+        QStandardPaths::TemplatesLocation,
+        QStandardPaths::StateLocation,
+        QStandardPaths::GenericStateLocation
+    };
+
+    for (auto location : locationsList) {
+        const auto paths = QStandardPaths::standardLocations(location);
+        qDebug() << "Location:" << location << "Paths:" << paths;
+    }
+
+    const auto envVars = QProcessEnvironment::systemEnvironment().toStringList();
+    qDebug() << "Environment Variables:\n";
+    for (const auto &envVar : envVars) {
+        qDebug().noquote() << envVar;
+    }
+}
+
+
 void handleCommand(const QByteArray &command)
 {
     if (command.size() > 100) {
@@ -78,6 +122,8 @@ void handleCommand(const QByteArray &command)
         command_printWindows();
     } else if (command == "hide_windows") {
         command_hideWindows();
+    } else if (command == "print_info") {
+        command_printInfo();
     } else {
         qWarning() << Q_FUNC_INFO << "Unknown command received. Available commands: " << availableCommands().join(",");
     }
