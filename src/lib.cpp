@@ -145,9 +145,10 @@ void command_printInfo()
 #endif
     };
 
-    for (auto location : locationsList) {
-        const auto paths = QStandardPaths::standardLocations(location);
-        qDebug() << "Location:" << location << "Paths:" << paths;
+    for (auto type : locationsList) {
+        const auto paths = QStandardPaths::standardLocations(type);
+        qDebug() << type << "standard:" << paths;
+        qDebug() << type << "writable:" << QStandardPaths::writableLocation(type);
     }
 
     const auto envVars = QProcessEnvironment::systemEnvironment().toStringList();
@@ -175,6 +176,8 @@ void handleCommand(const QByteArray &command)
         QMetaObject::invokeMethod(QCoreApplication::instance(), command_hideWindows);
     } else if (command == "print_info") {
         QMetaObject::invokeMethod(QCoreApplication::instance(), command_printInfo);
+    } else if (command == "set_persistent_windows_false") {
+        QMetaObject::invokeMethod(QCoreApplication::instance(), command_setPersistentWindowsFalse);
     } else {
         qWarning() << Q_FUNC_INFO << "Unknown command received. Available commands: " << availableCommands().join(",");
     }
