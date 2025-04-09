@@ -16,6 +16,6 @@ if [ ! -f "$BUILD_DIR/bin/testvasco" ]; then
     exit 1
 fi
 
-rm /tmp/testvasco-IpcPipe
+rm -rf /tmp/testvasco-IpcPipe
 
 LD_PRELOAD=$BUILD_DIR/lib/libvascodagammaray.so $BUILD_DIR/bin/testvasco &

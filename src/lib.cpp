@@ -57,6 +57,11 @@ void install_qt_message_handler()
                 out << msg << Qt::endl;
             }
 
+            static const QStringList blacklist = { "QSocketNotifier: Can only be used with threads started with QThread" };
+            if (std::any_of(blacklist.begin(), blacklist.end(), [&](const QString &blacklistedMsg) { return msg.contains(blacklistedMsg); })) {
+                return;
+            }
+
             s_originalHandler(type, context, msg);
         });
     }
@@ -74,11 +79,7 @@ void wait_for_qt()
         std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
-    QMetaObject::invokeMethod(QCoreApplication::instance(), [] {
-        install_qt_message_handler();
-        qDebug() << "Message handler installed for" << qEnvironmentVariable("VASCO_OUTPUT_FILE");
-    });
-
+    install_qt_message_handler();
     qDebug() << "Qt started";
 }
 
