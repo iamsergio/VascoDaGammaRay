@@ -12,6 +12,7 @@
 #include <QQuickWindow>
 #include <QTextStream>
 #include <QProcessEnvironment>
+#include <QQmlDebuggingEnabler>
 
 #include <thread>
 
@@ -215,6 +216,8 @@ void library_init()
     qDebug() << "Library loaded successfully!";
     std::thread([]() {
         qDebug() << "Thread started!";
+        QQmlDebuggingEnabler::enableDebugging(true);
+
         Vasco::wait_for_qt();
         Vasco::listen();
     }).detach();
