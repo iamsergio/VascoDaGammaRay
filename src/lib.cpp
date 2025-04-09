@@ -216,9 +216,10 @@ bool listen()
 
 void library_init()
 {
+    QQmlDebuggingEnabler::enableDebugging(true);
+
     std::thread([]() {
         qDebug() << "Vasco: Started";
-        QQmlDebuggingEnabler::enableDebugging(true);
 
         Vasco::wait_for_qt();
         Vasco::listen();
