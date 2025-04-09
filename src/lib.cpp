@@ -26,6 +26,12 @@ QString appName()
     return info.fileName();
 }
 
+QString loggingFileName()
+{
+    // TODO: Add some env var
+    return QStringLiteral("/tmp/vasco-%1.out").arg(appName());
+}
+
 
 QStringList availableCommands()
 {
@@ -37,11 +43,7 @@ QFile *s_logFile = nullptr;
 
 void install_qt_message_handler()
 {
-    const QString outputFilePath = [] {
-        // TODO: Add some env var
-        return QStringLiteral("/tmp/vasco-%1.out").arg(appName());
-    }();
-
+    const QString outputFilePath = loggingFileName();
     if (!outputFilePath.isEmpty()) {
         s_logFile = new QFile(outputFilePath);
 
@@ -80,7 +82,7 @@ void wait_for_qt()
     }
 
     install_qt_message_handler();
-    qDebug() << "Qt started";
+    qDebug() << "vasco: Qt started. Logging to" << s_logFile;
 }
 
 void command_printWindows()
@@ -194,7 +196,7 @@ bool listen()
         qWarning() << "Failed to start server:" << server.errorString() << "on pipe" << pipeName;
         return false;
     }
-    qDebug().nospace().noquote() << "Server listening on /tmp/" << pipeName;
+    qDebug().nospace().noquote() << "Vasco: Server listening on /tmp/" << pipeName;
 
     while (server.isListening()) {
         if (server.waitForNewConnection(-1)) {
@@ -214,9 +216,8 @@ bool listen()
 
 void library_init()
 {
-    qDebug() << "Library loaded successfully!";
     std::thread([]() {
-        qDebug() << "Thread started!";
+        qDebug() << "Vasco: Started";
         QQmlDebuggingEnabler::enableDebugging(true);
 
         Vasco::wait_for_qt();
