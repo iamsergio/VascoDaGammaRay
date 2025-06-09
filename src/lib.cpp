@@ -82,7 +82,7 @@ void wait_for_qt()
     }
 
     install_qt_message_handler();
-    qDebug() << "vasco: Qt started. Logging to" << s_logFile;
+    qDebug() << "vasco: Qt started. Logging to" << loggingFileName();
 }
 
 void command_printWindows()
