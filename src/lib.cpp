@@ -13,12 +13,58 @@
 #include <QTextStream>
 #include <QProcessEnvironment>
 #include <QQmlDebuggingEnabler>
+#include <QTimer>
+
+#include <QtCore/private/qhooks_p.h>
 
 #include <thread>
+#include <iostream>
 
 static bool s_shouldQuit = false;
 
 namespace Vasco {
+
+thread_local QHash<QObject *, qint64> s_objectCreationTimes;
+QVector<QQuickWindow *> s_seenWindows;
+
+class EventFilter : public QObject
+{
+public:
+    bool eventFilter(QObject *obj, QEvent *event) override
+    {
+        if (auto window = qobject_cast<QQuickWindow *>(obj)) {
+            if (!s_seenWindows.contains(window)) {
+                s_seenWindows.append(window);
+                auto ctx = new QObject();
+                QObject::connect(window, &QQuickWindow::frameSwapped, ctx, [window, ctx] {
+                    delete ctx;
+                    auto it = s_objectCreationTimes.find(window);
+                    if (it != s_objectCreationTimes.end()) {
+                        qint64 currentTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                 std::chrono::steady_clock::now().time_since_epoch())
+                                                 .count();
+                        qint64 elapsedTime = currentTime - it.value();
+                        qDebug() << "Frame swapped for window" << window << "elapsed time since creation:" << elapsedTime << "ms";
+                    }
+                });
+            }
+        }
+
+        return QObject::eventFilter(obj, event);
+    }
+};
+
+static void objectAddHook(QObject *obj)
+{
+    s_objectCreationTimes[obj] = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                     std::chrono::steady_clock::now().time_since_epoch())
+                                     .count();
+}
+
+static void objectRemoveHook(QObject *obj)
+{
+    s_objectCreationTimes.remove(obj);
+}
 
 QString appName()
 {
@@ -78,8 +124,12 @@ void clean_message_handler()
 void wait_for_qt()
 {
     while (!QCoreApplication::instance()) {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
+
+    QTimer::singleShot(0, QCoreApplication::instance(), []() {
+        QCoreApplication::instance()->installEventFilter(new EventFilter());
+    });
 
     install_qt_message_handler();
     qDebug() << "vasco: Qt started. Logging to" << loggingFileName();
@@ -217,6 +267,8 @@ bool listen()
 void library_init()
 {
     QQmlDebuggingEnabler::enableDebugging(true);
+    qtHookData[QHooks::AddQObject] = ( quintptr )&Vasco::objectAddHook;
+    qtHookData[QHooks::RemoveQObject] = ( quintptr )&Vasco::objectRemoveHook;
 
     std::thread([]() {
         qDebug() << "Vasco: Started";

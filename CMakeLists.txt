@@ -27,7 +27,7 @@ generate_export_header(
 )
 
 target_link_libraries(
-    vascodagammaray Qt6::Gui Qt6::Network Qt6::Quick
+    vascodagammaray Qt6::Gui Qt6::Network Qt6::Quick Qt6::CorePrivate
 )
 
 target_include_directories(vascodagammaray PUBLIC ${CMAKE_BINARY_DIR})
