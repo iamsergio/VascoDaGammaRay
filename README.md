@@ -23,3 +23,12 @@ Then communicate via a socket:
 - nc
 
   `echo -n "print_windows" | nc -U /tmp/testvasco-IpcPipe`
+
+## Available Commands
+  - `quit`
+  - `print_windows`
+  - `hide_windows`
+  - `set_persistent_windows_false`
+  - `print_info`
+  - `track_window_events`
+  

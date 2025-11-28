@@ -9,6 +9,10 @@ set(CMAKE_INCLUDE_CURRENT_DIRS ON)
 
 find_package(Qt6 6.5 NO_MODULE REQUIRED COMPONENTS Gui Network Quick)
 
+if(Qt6Core_VERSION VERSION_GREATER_EQUAL "6.10.0")
+    find_package(Qt6CorePrivate 6.10.0 NO_MODULE REQUIRED)
+endif()   
+
 if (ENABLE_ASAN)
     add_compile_options(-fsanitize=address -fsanitize=undefined)
     add_link_options(-fsanitize=address -fsanitize=undefined)

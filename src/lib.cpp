@@ -17,15 +17,75 @@
 
 #include <QtCore/private/qhooks_p.h>
 
+#include <array>
+#include <qcoreevent.h>
+#include <qdatetime.h>
 #include <thread>
-#include <iostream>
 
 static bool s_shouldQuit = false;
+static bool s_shouldTrackWindowEvents = true;
 
 namespace Vasco {
 
 thread_local QHash<QObject *, qint64> s_objectCreationTimes;
 QVector<QQuickWindow *> s_seenWindows;
+
+QString currentTimestamp()
+{
+    return QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
+}
+
+void connectWindowDebugInfo(QWindow *window) {
+
+    QObject::connect(window, &QWindow::screenChanged, window, [window](QScreen *screen) {
+        if (s_shouldTrackWindowEvents)
+            qDebug() << currentTimestamp() << "[Window]" << window << "screenChanged" << screen;
+    });
+
+    QObject::connect(window, &QWindow::windowStateChanged, window, [window](Qt::WindowState state) {
+        if (s_shouldTrackWindowEvents)
+            qDebug() << currentTimestamp() << "[Window]" << window << "windowStateChanged" << state;
+    });
+
+    QObject::connect(window, &QWindow::transientParentChanged, window, [window]() {
+        if (s_shouldTrackWindowEvents)
+            qDebug() << currentTimestamp() << "[Window]" << window << "transientParentChanged" << window->transientParent();
+    });
+
+    QObject::connect(window, &QWindow::visibleChanged, window, [window]() {
+        if (s_shouldTrackWindowEvents)
+            qDebug() << currentTimestamp() << "[Window]" << window << "visibleChanged" << window->isVisible();
+    });
+
+    QObject::connect(window, &QWindow::visibilityChanged, window, [window](QWindow::Visibility visibility) {
+        if (s_shouldTrackWindowEvents)
+            qDebug() << currentTimestamp() << "[Window]" << window << "visibilityChanged" << visibility;
+    });
+}
+
+void debugWindowDebugInfo(QWindow *window, QEvent *event)  {
+    if (!s_shouldTrackWindowEvents)
+        return;
+
+    static std::array<QEvent::Type, 4> interestingEvents = {
+        QEvent::Expose,
+        QEvent::Resize,
+        QEvent::Move,
+        QEvent::ParentChange
+    };
+
+    if (std::find(interestingEvents.begin(), interestingEvents.end(), event->type()) == interestingEvents.end())
+        return;
+
+    if (event->type() == QEvent::Expose) {
+        QExposeEvent *exposeEvent = static_cast<QExposeEvent *>(event);
+        qDebug() << currentTimestamp() << "[Window]" << window << "Event:" << event->type()
+                 << "isExposed:" << window->isExposed();
+        
+    } else {
+        qDebug() << currentTimestamp() << "[Window]" << window << "Event:" << event->type(); 
+    }
+}
 
 class EventFilter : public QObject
 {
@@ -33,6 +93,10 @@ public:
     bool eventFilter(QObject *obj, QEvent *event) override
     {
         if (auto window = qobject_cast<QQuickWindow *>(obj)) {
+
+            if (s_shouldTrackWindowEvents)
+                debugWindowDebugInfo(window, event);
+
             if (!s_seenWindows.contains(window)) {
                 s_seenWindows.append(window);
                 auto ctx = new QObject();
@@ -47,6 +111,8 @@ public:
                         qDebug() << "Frame swapped for window" << window << "elapsed time since creation:" << elapsedTime << "ms";
                     }
                 });
+
+                connectWindowDebugInfo(window);
             }
         }
 
@@ -81,7 +147,7 @@ QString loggingFileName()
 
 QStringList availableCommands()
 {
-    return QStringList() << "quit" << "print_windows" << "hide_windows" << "set_persistent_windows_false" << "print_info";
+    return QStringList() << "quit" << "print_windows" << "hide_windows" << "set_persistent_windows_false" << "print_info" << "track_window_events";
 }
 
 QtMessageHandler s_originalHandler;
@@ -167,6 +233,12 @@ void command_setPersistentWindowsFalse()
     }
 }
 
+void command_trackWindowEvents()
+{
+    s_shouldTrackWindowEvents = true;
+    qDebug() << Q_FUNC_INFO << "Window event dumping enabled.";
+}
+
 void command_printInfo()
 {
     qDebug() << Q_FUNC_INFO << "Printing QStandardPaths locations";
@@ -232,6 +304,8 @@ void handleCommand(const QByteArray &command)
         QMetaObject::invokeMethod(QCoreApplication::instance(), command_printInfo);
     } else if (command == "set_persistent_windows_false") {
         QMetaObject::invokeMethod(QCoreApplication::instance(), command_setPersistentWindowsFalse);
+    } else if (command == "track_window_events") {
+        QMetaObject::invokeMethod(QCoreApplication::instance(), command_trackWindowEvents);
     } else {
         qWarning() << Q_FUNC_INFO << "Unknown command received. Available commands: " << availableCommands().join(",");
     }
