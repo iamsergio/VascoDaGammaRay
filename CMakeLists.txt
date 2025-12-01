@@ -10,7 +10,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIRS ON)
 
-find_package(Qt6 6.5 NO_MODULE REQUIRED COMPONENTS Gui Network Quick)
+find_package(Qt6 6.5 NO_MODULE REQUIRED COMPONENTS Gui Network Quick Widgets)
 
 if(Qt6Core_VERSION VERSION_GREATER_EQUAL "6.10.0")
     set(QT_NO_PRIVATE_MODULE_WARNING ON)
@@ -46,3 +46,6 @@ enable_testing()
 if (BUILD_TESTING)
     add_subdirectory(test)
 endif()
+
+add_executable(vasco-gui src/gui/main.cpp)
+target_link_libraries(vasco-gui PRIVATE Qt6::Widgets Qt6::Network)
