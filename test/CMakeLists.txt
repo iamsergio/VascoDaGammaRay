@@ -22,4 +22,4 @@ qt_add_executable(
     resources.qrc
 )
 
-target_link_libraries(testvasco PUBLIC Qt${QTMAJOR}::Quick)
+target_link_libraries(testvasco PUBLIC Qt${QTMAJOR}::Quick vascodagammaray)

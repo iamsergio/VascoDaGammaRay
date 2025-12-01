@@ -18,7 +18,7 @@ fi
 
 rm -rf /tmp/testvasco-IpcPipe
 
-LD_PRELOAD=$BUILD_DIR/lib/libvascodagammaray.so $BUILD_DIR/bin/testvasco &
+$BUILD_DIR/bin/testvasco &
 
 sleep 2
 
