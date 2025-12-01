@@ -14,12 +14,12 @@
 #include <QProcessEnvironment>
 #include <QQmlDebuggingEnabler>
 #include <QTimer>
+#include <QEvent>
+#include <QDateTime>
 
 #include <QtCore/private/qhooks_p.h>
 
 #include <array>
-#include <qcoreevent.h>
-#include <qdatetime.h>
 #include <thread>
 
 static bool s_shouldQuit = false;
