@@ -3,6 +3,9 @@
 cmake_minimum_required(VERSION 3.21)
 project(vascodagammaray)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIRS ON)
@@ -25,6 +28,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 include(GenerateExportHeader)
 add_library(vascodagammaray SHARED
     src/lib.cpp
+    src/Command.cpp
 )
 
 generate_export_header(

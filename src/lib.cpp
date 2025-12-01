@@ -22,10 +22,13 @@
 #include <array>
 #include <thread>
 
-static bool s_shouldQuit = false;
-static bool s_shouldTrackWindowEvents = true;
+#include "Globals.h"
+#include "Command.h"
 
 namespace Vasco {
+
+bool s_shouldQuit = false;
+bool s_shouldTrackWindowEvents = true;
 
 thread_local QHash<QObject *, qint64> s_objectCreationTimes;
 QVector<QQuickWindow *> s_seenWindows;
@@ -144,12 +147,6 @@ QString loggingFileName()
     return QStringLiteral("/tmp/vasco-%1.out").arg(appName());
 }
 
-
-QStringList availableCommands()
-{
-    return QStringList() << "quit" << "print_windows" << "hide_windows" << "set_persistent_windows_false" << "print_info" << "track_window_events";
-}
-
 QtMessageHandler s_originalHandler;
 QFile *s_logFile = nullptr;
 
@@ -201,113 +198,28 @@ void wait_for_qt()
     qDebug() << "vasco: Qt started. Logging to" << loggingFileName();
 }
 
-void command_printWindows()
+void handleCommand(const QByteArray &commandName)
 {
-    const auto windows = QGuiApplication::allWindows();
-    qDebug() << Q_FUNC_INFO << "Printing count=" << windows.size();
-    for (auto window : windows) {
-        qDebug() << "Window:" << window->title() << ";isVisible=" << window->isVisible() << "; this=" << window
-                 << "; geometry=" << window->geometry();
-    }
-}
-
-void command_hideWindows()
-{
-    const auto windows = QGuiApplication::allWindows();
-    qDebug() << Q_FUNC_INFO << "Hiding windows";
-    for (auto window : windows) {
-        window->hide();
-        qDebug() << "Window:" << window->title() << "is now hidden.";
-    }
-}
-
-void command_setPersistentWindowsFalse()
-{
-    const auto windows = QGuiApplication::allWindows();
-    qDebug() << Q_FUNC_INFO << "Setting persistent to false for QQuickWindows";
-    for (auto window : windows) {
-        if (auto quickWindow = dynamic_cast<QQuickWindow *>(window)) {
-            quickWindow->setPersistentSceneGraph(false);
-            qDebug() << "QQuickWindow:" << quickWindow->title() << "persistent set to false.";
-        }
-    }
-}
-
-void command_trackWindowEvents()
-{
-    s_shouldTrackWindowEvents = true;
-    qDebug() << Q_FUNC_INFO << "Window event dumping enabled.";
-}
-
-void command_printInfo()
-{
-    qDebug() << Q_FUNC_INFO << "Printing QStandardPaths locations";
-
-    const QList<QStandardPaths::StandardLocation> locationsList = {
-        QStandardPaths::DesktopLocation,
-        QStandardPaths::DocumentsLocation,
-        QStandardPaths::FontsLocation,
-        QStandardPaths::ApplicationsLocation,
-        QStandardPaths::MusicLocation,
-        QStandardPaths::MoviesLocation,
-        QStandardPaths::PicturesLocation,
-        QStandardPaths::TempLocation,
-        QStandardPaths::HomeLocation,
-        QStandardPaths::AppLocalDataLocation,
-        QStandardPaths::CacheLocation,
-        QStandardPaths::GenericDataLocation,
-        QStandardPaths::RuntimeLocation,
-        QStandardPaths::ConfigLocation,
-        QStandardPaths::DownloadLocation,
-        QStandardPaths::GenericCacheLocation,
-        QStandardPaths::GenericConfigLocation,
-        QStandardPaths::AppDataLocation,
-        QStandardPaths::AppConfigLocation,
-        QStandardPaths::PublicShareLocation,
-        QStandardPaths::TemplatesLocation,
-#if (QT_VERSION >= QT_VERSION_CHECK(6, 7, 0))
-        QStandardPaths::StateLocation,
-        QStandardPaths::GenericStateLocation
-#endif
-    };
-
-    for (auto type : locationsList) {
-        const auto paths = QStandardPaths::standardLocations(type);
-        qDebug() << type << "standard:" << paths;
-        qDebug() << type << "writable:" << QStandardPaths::writableLocation(type);
-    }
-
-    const auto envVars = QProcessEnvironment::systemEnvironment().toStringList();
-    qDebug() << "Environment Variables:\n";
-    for (const auto &envVar : envVars) {
-        qDebug().noquote() << envVar;
-    }
-}
-
-void handleCommand(const QByteArray &command)
-{
-    if (command.size() > 100) {
+    if (commandName.size() > 100) {
         qWarning() << Q_FUNC_INFO << "Weird command received";
         return;
     }
 
-    qDebug() << Q_FUNC_INFO << "received" << command;
-    if (command == "quit") {
-        s_shouldQuit = true;
-        clean_message_handler();
-        QCoreApplication::quit();
-    } else if (command == "print_windows") {
-        QMetaObject::invokeMethod(QCoreApplication::instance(), command_printWindows);
-    } else if (command == "hide_windows") {
-        QMetaObject::invokeMethod(QCoreApplication::instance(), command_hideWindows);
-    } else if (command == "print_info") {
-        QMetaObject::invokeMethod(QCoreApplication::instance(), command_printInfo);
-    } else if (command == "set_persistent_windows_false") {
-        QMetaObject::invokeMethod(QCoreApplication::instance(), command_setPersistentWindowsFalse);
-    } else if (command == "track_window_events") {
-        QMetaObject::invokeMethod(QCoreApplication::instance(), command_trackWindowEvents);
+    qDebug() << Q_FUNC_INFO << "received" << commandName;
+
+    auto cmd = Command::create(commandName);
+    if (cmd) {
+        // We need to move the unique_ptr into the lambda, but C++14/17 lambdas with move capture
+        // are a bit verbose or we can just release it to a raw pointer since we delete it inside.
+        // Or better, use a shared_ptr or just release.
+        // The previous code was releasing it.
+        Command *rawCmd = cmd.release();
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [rawCmd]() {
+            rawCmd->execute();
+            delete rawCmd;
+        });
     } else {
-        qWarning() << Q_FUNC_INFO << "Unknown command received. Available commands: " << availableCommands().join(",");
+        qWarning() << Q_FUNC_INFO << "Unknown command received:" << commandName;
     }
 }
 
